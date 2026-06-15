@@ -59,26 +59,35 @@ class RagStack(Stack):
                 ],
             )
         )
-        fn.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    "aws-marketplace:ViewSubscriptions",
-                    "aws-marketplace:Subscribe",
-                ],
-                resources=["*"],
-            )
-        )
 
         api = apigw.RestApi(
             self,
             "RagApi",
             rest_api_name="Helsinki RAG API",
             description="RAG-powered Q&A over Helsinki service map data",
-            deploy_options=apigw.StageOptions(stage_name="prod"),
+            deploy_options=apigw.StageOptions(
+                stage_name="prod",
+                throttling_rate_limit=10,
+                throttling_burst_limit=5,
+            ),
         )
 
+        api_key = api.add_api_key("RagApiKey", api_key_name="rag-demo-key")
+        plan = api.add_usage_plan(
+            "RagUsagePlan",
+            name="rag-demo-plan",
+            throttle=apigw.ThrottleSettings(rate_limit=10, burst_limit=5),
+            quota=apigw.QuotaSettings(limit=100, period=apigw.Period.DAY),
+        )
+        plan.add_api_key(api_key)
+        plan.add_api_stage(stage=api.deployment_stage)
+
         ask_resource = api.root.add_resource("ask")
-        ask_resource.add_method("POST", apigw.LambdaIntegration(fn))
+        ask_resource.add_method(
+            "POST",
+            apigw.LambdaIntegration(fn),
+            api_key_required=True,
+        )
 
         health_resource = api.root.add_resource("health")
         health_resource.add_method("GET", apigw.LambdaIntegration(fn))
