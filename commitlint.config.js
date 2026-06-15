@@ -1,0 +1,1 @@
+/home/keio/coding/pm/hooks/commitlint.config.js
