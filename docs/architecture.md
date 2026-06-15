@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository contains two AWS architecture demos, each solving a distinct problem with production-ready patterns. Both are deployed to `eu-north-1` (Stockholm) using AWS CDK (Python).
+This repository contains three AWS architecture demos, each solving a distinct problem with production-ready patterns. All are deployed to `eu-north-1` (Stockholm) using AWS CDK (Python).
 
 ---
 
@@ -129,6 +129,78 @@ Image pull at startup:
   Fargate → ECR Docker (interface endpoint)
   Fargate → S3 (gateway endpoint, for image layers)
 ```
+
+---
+
+## Project 3: RAG on Bedrock
+
+### Problem
+
+Users want to ask natural language questions about Helsinki city services without manually searching through 21,000+ service point records.
+
+### Solution
+
+A serverless RAG (Retrieval-Augmented Generation) API: API Gateway → Lambda → S3 retrieval + Bedrock generation.
+
+```
+API Gateway (POST /ask)
+    → Lambda (512 MB, 60s timeout)
+        → S3: read Helsinki CSV, keyword-match relevant records
+        → Bedrock: send context + question to Claude Haiku 4.5
+        → Return structured JSON answer
+```
+
+### Design Decisions
+
+**Why keyword search instead of vector embeddings?**
+
+This demo uses keyword matching (term frequency scoring) instead of a proper vector store. The trade-off:
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| Keyword search | Zero cost, no infrastructure, instant setup | Misses semantic similarity ("parks" won't match "puisto") |
+| Vector store (OpenSearch Serverless) | Semantic search, handles synonyms and translations | $5.76/day minimum (2 OCUs), significant for a demo |
+| Bedrock Knowledge Base | Managed chunking, embedding, and retrieval | Requires vector store backend |
+
+For a demo with structured tabular data (not unstructured documents), keyword search is adequate. The architecture pattern (retrieve → augment → generate) is identical regardless of retrieval method — swapping in a vector store is a configuration change, not a redesign.
+
+**Why Claude Haiku instead of a larger model?**
+
+Haiku is the fastest and cheapest Claude model. For this use case (summarizing structured data, not complex reasoning), it produces high-quality answers at ~$0.001 per query. In production, you might use Sonnet for more nuanced responses.
+
+**Why EU inference profile?**
+
+The `eu.anthropic.claude-haiku-4-5-20251001-v1:0` inference profile routes requests across EU regions (eu-north-1, eu-west-1, eu-west-3) for better availability and lower latency. Data stays within the EU. The IAM policy uses a region wildcard on the foundation model ARN since the profile can route to any EU region.
+
+**Why Lambda instead of Fargate?**
+
+| Factor | Lambda | Fargate |
+|--------|--------|---------|
+| Cold start | ~1s (acceptable for Q&A) | None (always running) |
+| Idle cost | $0 | ~$0.24/day minimum |
+| Max duration | 15 minutes | Unlimited |
+| Concurrency | 1000 default | Configurable |
+
+For a bursty Q&A workload with seconds between requests, Lambda's pay-per-invocation model is ideal. Fargate would be better for sustained high-throughput scenarios.
+
+### How It Connects to the Data Lake
+
+The RAG Lambda reads directly from the data lake's S3 bucket (`helsinki-data-lake-<account>/raw/`). This demonstrates a key data lake principle: **store once, consume many ways**. The same Helsinki CSV is:
+
+1. Queried via SQL in Athena (data lake project)
+2. Served as CRUD items in the web service (HA web project, different data)
+3. Used as RAG context for natural language Q&A (this project)
+
+### Production Path
+
+To evolve this into a production RAG system:
+
+1. **Add embeddings**: Use Amazon Titan Embeddings to vectorize the Helsinki data
+2. **Add vector store**: OpenSearch Serverless or Aurora pgvector for semantic retrieval
+3. **Use Bedrock Knowledge Base**: Managed chunking, embedding pipeline, and retrieval API
+4. **Add Guardrails**: Content filtering, PII redaction, grounding checks
+5. **Add caching**: API Gateway caching or ElastiCache to avoid re-computing identical queries
+6. **Add auth**: Cognito user pool or API keys on the API Gateway
 
 ---
 
