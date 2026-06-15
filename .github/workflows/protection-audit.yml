@@ -1,0 +1,63 @@
+name: Protection Audit
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday at 06:00 UTC (09:00 Helsinki)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch protection config
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          ISSUES=0
+
+          echo "=== Protection Audit: $REPO ==="
+
+          # Check for old branch protection (admin bypass loophole)
+          OLD=$(gh api "repos/${REPO}/branches/main/protection" --jq '.enforce_admins.enabled' 2>/dev/null || true)
+          if [[ -n "$OLD" ]]; then
+            echo "::error::Old branch protection exists (enforce_admins=$OLD) — this allows --admin bypass. Remove it."
+            ISSUES=$((ISSUES + 1))
+          fi
+
+          # Check ruleset exists
+          RULESET_ID=$(gh api "repos/${REPO}/rulesets" --jq '[.[] | select(.name == "Protect main")][0].id' 2>/dev/null || true)
+          if [[ -z "$RULESET_ID" ]] || [[ "$RULESET_ID" == "null" ]]; then
+            echo "::error::No 'Protect main' ruleset found"
+            ISSUES=$((ISSUES + 1))
+          else
+            # Check bypass actors
+            BYPASS=$(gh api "repos/${REPO}/rulesets/${RULESET_ID}" --jq '[.bypass_actors[]?] | length' 2>/dev/null || echo "?")
+            if [[ "$BYPASS" != "0" ]]; then
+              echo "::error::Ruleset has ${BYPASS} bypass actors (should be 0)"
+              ISSUES=$((ISSUES + 1))
+            else
+              echo "bypass_actors: [] (no admin bypass)"
+            fi
+
+            # Check required status checks exist
+            CHECKS=$(gh api "repos/${REPO}/rulesets/${RULESET_ID}" \
+              --jq '[.rules[]? | select(.type == "required_status_checks") | .parameters.required_status_checks[]?.context] | length' \
+              2>/dev/null || echo "0")
+            if [[ "$CHECKS" == "0" ]]; then
+              echo "::warning::No required status checks in ruleset"
+            else
+              echo "required status checks: ${CHECKS} configured"
+            fi
+          fi
+
+          if [[ $ISSUES -gt 0 ]]; then
+            echo ""
+            echo "Fix: run protect-main.sh --update --cleanup on this repo"
+            exit 1
+          fi
+
+          echo "Protection audit passed"
