@@ -1,9 +1,16 @@
 import csv
 import io
 import json
+import logging
 import os
 
 import boto3
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+MAX_QUESTION_LENGTH = 2000
+MAX_SEARCH_TERMS = 20
 
 BUCKET = os.environ["DATA_BUCKET"]
 DATA_KEY = os.environ.get("DATA_KEY", "raw/helsinki_service_points.csv")
@@ -30,7 +37,7 @@ def load_data():
 
 def search_relevant(query, data, max_results=50):
     query_lower = query.lower()
-    terms = query_lower.split()
+    terms = query_lower.split()[:MAX_SEARCH_TERMS]
 
     scored = []
     for row in data:
@@ -120,6 +127,13 @@ def handler(event, context):
                 "body": json.dumps({"error": "Missing 'question' field"}),
             }
 
+        if len(question) > MAX_QUESTION_LENGTH:
+            return {
+                "statusCode": 400,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({"error": f"Question exceeds {MAX_QUESTION_LENGTH} characters"}),
+            }
+
         data = load_data()
         relevant = search_relevant(question, data)
         context_text = format_context(relevant)
@@ -136,9 +150,13 @@ def handler(event, context):
             }),
         }
 
-    except Exception as e:
+    except Exception:
+        logger.exception("Unhandled error")
         return {
             "statusCode": 500,
             "headers": {"Content-Type": "application/json"},
-            "body": json.dumps({"error": str(e)}),
+            "body": json.dumps({
+                "error": "Internal server error",
+                "request_id": context.aws_request_id,
+            }),
         }
