@@ -11,6 +11,7 @@ AWS architecture demos built with CDK (Python). Each project demonstrates a prod
 |---------|----------|-------------|
 | [Data Lake](projects/data-lake/) | S3, Glue, Athena, Iceberg | Helsinki open data pipeline with CSV → Parquet → Iceberg evolution |
 | [HA Web Service](projects/ha-web-service/) | VPC, ALB, Fargate, DynamoDB | Two-AZ Fargate service with no NAT Gateway architecture |
+| [RAG on Bedrock](projects/rag-bedrock/) | Lambda, API Gateway, Bedrock | Q&A over Helsinki data using Claude Haiku |
 
 ## Architecture Overview
 
@@ -49,9 +50,12 @@ aws-projects/
 │   │   ├── cdk/              CDK stack (S3, Glue, Athena)
 │   │   ├── queries/          Athena SQL (raw, Parquet, Iceberg)
 │   │   └── scripts/          Data download + Helsinki CSV
-│   └── ha-web-service/
-│       ├── cdk/              CDK stack (VPC, ALB, Fargate, DynamoDB)
-│       └── app/              FastAPI container + Dockerfile
+│   ├── ha-web-service/
+│   │   ├── cdk/              CDK stack (VPC, ALB, Fargate, DynamoDB)
+│   │   └── app/              FastAPI container + Dockerfile
+│   └── rag-bedrock/
+│       ├── cdk/              CDK stack (Lambda, API Gateway, IAM)
+│       └── lambda/           Python handler (S3 retrieval + Bedrock)
 ├── docs/
 │   └── architecture.md       Detailed architecture documentation
 └── private/                  .gitignored — credentials, interview prep
@@ -60,15 +64,16 @@ aws-projects/
 ## Tech Stack
 
 - **IaC**: AWS CDK v2 (Python)
-- **Compute**: ECS Fargate (256 CPU / 512 MB)
+- **Compute**: ECS Fargate (256 CPU / 512 MB), Lambda
 - **Storage**: S3, DynamoDB (on-demand)
 - **Analytics**: Glue Data Catalog, Athena, Apache Iceberg
-- **Networking**: VPC (2 AZ), ALB, VPC Gateway + Interface Endpoints
+- **AI/ML**: Amazon Bedrock (Claude Haiku 4.5)
+- **Networking**: VPC (2 AZ), ALB, API Gateway, VPC Gateway + Interface Endpoints
 - **Application**: FastAPI, uvicorn, boto3
 
 ## Cost
 
-Both projects run under $2/day combined. DynamoDB and S3 are pennies at demo scale. The main costs are the ALB (~$0.50/day) and VPC interface endpoints (~$0.24/day each). Destroy stacks when not in use.
+All three projects run under $2/day combined. The RAG project has zero idle cost (Lambda + API Gateway are pay-per-request; Bedrock is pay-per-token). The main running costs are the ALB (~$0.50/day) and VPC interface endpoints (~$0.24/day each). Destroy stacks when not in use.
 
 ## License
 
