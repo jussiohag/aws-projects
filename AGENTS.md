@@ -1,12 +1,14 @@
 # aws-projects
 
 ## Project
-TODO: add project description
+AWS architecture demos: data lake (S3/Glue/Athena/Iceberg) and HA web service (VPC/ALB/Fargate/DynamoDB). CDK Python, deployed to eu-north-1.
 
 ## Commands
-- Build: N/A
-- Test: N/A
-- Lint: N/A
+- Synth all: `make synth`
+- Deploy: `make deploy-datalake` / `make deploy-haweb`
+- Destroy: `make destroy-datalake` / `make destroy-haweb`
+- Lint: `make lint`
+- CI: `make ci`
 
 ## Conventions
 - Task stamping: [ ] → [-] 🏗️ YYYY-MM-DD HH:MM → [x] ✅ YYYY-MM-DD HH:MM
