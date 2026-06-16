@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "@/components/Layout";
+import { Landing } from "@/routes/Landing";
 
 function Placeholder({ name }: { name: string }) {
   return <div style={{ padding: 24, color: "var(--text-heading)" }}>{name}</div>;
@@ -10,7 +11,7 @@ export function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<Layout />}>
-          <Route index element={<Placeholder name="Landing" />} />
+          <Route index element={<Landing />} />
           <Route path="data-lake" element={<Placeholder name="Data Lake" />} />
           <Route
             path="ha-web-service"
