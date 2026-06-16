@@ -2,7 +2,7 @@
 
 ## Infrastructure (CDK)
 - VPC: 2 AZs, public + private subnets, no NAT Gateway
-- ALB: `HaWebS-Servi-CkYPwhwvnS6p-2092562009.eu-north-1.elb.amazonaws.com`
+- ALB: `<ALB_DNS>.eu-north-1.elb.amazonaws.com`
 - ECS Fargate: 2 tasks (256 CPU, 512 MB), circuit breaker enabled
 - DynamoDB: `ha-web-items`, on-demand billing, PITR enabled
 - VPC Endpoints: DynamoDB (gateway), S3 (gateway), ECR Docker + API (interface), CloudWatch Logs (interface)
