@@ -1,0 +1,26 @@
+# AI Harness gates — aws-projects (CDK Python + React/Vite frontend)
+gates:
+  - name: python-compile
+    layer: A
+    command: "make lint"
+    timeout: 30
+
+  - name: typecheck
+    layer: A
+    command: "cd projects/static-hosting && npx tsc --noEmit"
+    timeout: 60
+
+  - name: secrets
+    layer: A
+    command: "gitleaks detect --source . --no-banner"
+    timeout: 30
+
+  - name: cdk-synth
+    layer: A
+    command: "make synth"
+    timeout: 120
+
+  - name: vite-build
+    layer: B
+    command: "cd projects/static-hosting && npm run build"
+    timeout: 60
