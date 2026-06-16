@@ -2,7 +2,7 @@
 CREATE TABLE helsinki_open_data.curated
 WITH (
     format = 'PARQUET',
-    external_location = 's3://helsinki-data-lake-REDACTED-ACCOUNT-ID/curated/',
+    external_location = 's3://helsinki-data-lake-<ACCOUNT_ID>/curated/',
     partitioned_by = ARRAY['municipality']
 ) AS
 SELECT id, name_fi, name_en, street_address_fi, address_zip,
