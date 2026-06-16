@@ -20,7 +20,17 @@ gates:
     command: "make synth"
     timeout: 120
 
+  - name: unit-tests
+    layer: B
+    command: "cd projects/static-hosting && npx vitest run"
+    timeout: 120
+
   - name: vite-build
     layer: B
     command: "cd projects/static-hosting && npm run build"
     timeout: 60
+
+  - name: coverage
+    layer: C
+    command: "cd projects/static-hosting && npx vitest run --coverage"
+    timeout: 300
