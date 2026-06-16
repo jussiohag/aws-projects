@@ -34,3 +34,4 @@ cdk.out2/
 
 # AWS CLI installer artifacts
 aws/
+.superpowers/
