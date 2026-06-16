@@ -1,0 +1,74 @@
+.wrapper {
+  max-width: 720px;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  color: var(--text-heading);
+  margin: 0 0 16px;
+}
+
+.keyPoints {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.point {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+.pointTitle {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.pointDesc {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.adr {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.adrTitle {
+  color: var(--text-heading);
+  font-size: 15px;
+  margin: 0 0 12px;
+}
+
+.adrSection {
+  margin-bottom: 8px;
+}
+
+.adrLabel {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+  margin-bottom: 2px;
+}
+
+.adrSection p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .keyPoints {
+    grid-template-columns: 1fr;
+  }
+}
