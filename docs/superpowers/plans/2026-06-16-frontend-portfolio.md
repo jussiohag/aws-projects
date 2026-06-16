@@ -3483,3 +3483,767 @@ git add -A && git commit -m "fix(static-hosting): address final verification iss
 ```
 
 Only if there are fixes. Skip if everything passes.
+
+---
+
+## Task 19: Set Up Vitest + React Testing Library
+
+**Files:**
+- Modify: `projects/static-hosting/package.json` (add dev deps)
+- Create: `projects/static-hosting/vitest.config.ts`
+- Create: `projects/static-hosting/src/test/setup.ts`
+
+- [ ] **Step 1: Install test dependencies**
+
+```bash
+cd projects/static-hosting
+npm install -D vitest @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom @vitest/coverage-v8
+```
+
+- [ ] **Step 2: Create vitest config**
+
+`projects/static-hosting/vitest.config.ts`:
+
+```ts
+import { defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
+import { resolve } from "path";
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      "@": resolve(__dirname, "src"),
+    },
+  },
+  test: {
+    environment: "jsdom",
+    setupFiles: ["./src/test/setup.ts"],
+    css: { modules: { classNameStrategy: "non-scoped" } },
+  },
+});
+```
+
+- [ ] **Step 3: Create test setup file**
+
+`projects/static-hosting/src/test/setup.ts`:
+
+```ts
+import "@testing-library/jest-dom/vitest";
+```
+
+- [ ] **Step 4: Add test script to package.json**
+
+Add to `scripts` in `package.json`:
+
+```json
+"test": "vitest run",
+"test:watch": "vitest",
+"test:coverage": "vitest run --coverage"
+```
+
+- [ ] **Step 5: Verify vitest runs (no tests yet)**
+
+```bash
+cd projects/static-hosting && npm test
+```
+
+Expected: "No test files found" or similar — confirms vitest is configured.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add projects/static-hosting/vitest.config.ts projects/static-hosting/src/test/ projects/static-hosting/package.json projects/static-hosting/package-lock.json
+git commit -m "chore(static-hosting): set up Vitest + React Testing Library"
+```
+
+---
+
+## Task 20: Data Layer Tests
+
+**Files:**
+- Create: `projects/static-hosting/src/data/projects.test.ts`
+- Create: `projects/static-hosting/src/data/queries.test.ts`
+- Create: `projects/static-hosting/src/data/decisions.test.ts`
+
+- [ ] **Step 1: Write project data tests**
+
+`src/data/projects.test.ts`:
+
+```ts
+import { describe, it, expect } from "vitest";
+import { PROJECTS, STATS } from "./projects";
+
+describe("PROJECTS", () => {
+  it("has exactly 4 projects", () => {
+    expect(PROJECTS).toHaveLength(4);
+  });
+
+  it("each project has required fields", () => {
+    for (const p of PROJECTS) {
+      expect(p.id).toBeTruthy();
+      expect(p.name).toBeTruthy();
+      expect(p.route).toMatch(/^\//);
+      expect(p.services.length).toBeGreaterThan(0);
+      expect(p.costItems.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("has unique ids and routes", () => {
+    const ids = PROJECTS.map((p) => p.id);
+    const routes = PROJECTS.map((p) => p.route);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(new Set(routes).size).toBe(routes.length);
+  });
+
+  it("static-hosting has this-site status", () => {
+    const staticHosting = PROJECTS.find((p) => p.id === "static-hosting");
+    expect(staticHosting?.status).toBe("this-site");
+  });
+
+  it("all other projects have deployed status", () => {
+    const others = PROJECTS.filter((p) => p.id !== "static-hosting");
+    for (const p of others) {
+      expect(p.status).toBe("deployed");
+    }
+  });
+});
+
+describe("STATS", () => {
+  it("project count matches PROJECTS length", () => {
+    expect(STATS.projectCount).toBe(PROJECTS.length);
+  });
+
+  it("region is eu-north-1", () => {
+    expect(STATS.region).toBe("eu-north-1");
+  });
+});
+```
+
+- [ ] **Step 2: Write query data tests**
+
+`src/data/queries.test.ts`:
+
+```ts
+import { describe, it, expect } from "vitest";
+import { QUERIES } from "./queries";
+
+describe("QUERIES", () => {
+  it("has 8 queries matching the SQL files", () => {
+    expect(QUERIES).toHaveLength(8);
+  });
+
+  it("each query has required fields", () => {
+    for (const q of QUERIES) {
+      expect(q.id).toBeTruthy();
+      expect(q.label).toBeTruthy();
+      expect(q.sql).toBeTruthy();
+      expect(q.result.columns.length).toBeGreaterThan(0);
+      expect(q.result.rows.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("has unique ids", () => {
+    const ids = QUERIES.map((q) => q.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("query-parquet has both CSV and Parquet bytes scanned", () => {
+    const parquet = QUERIES.find((q) => q.id === "query-parquet");
+    expect(parquet?.bytesScanned).toHaveLength(2);
+    expect(parquet?.bytesScanned?.[0].format).toBe("CSV");
+    expect(parquet?.bytesScanned?.[1].format).toBe("Parquet");
+  });
+});
+```
+
+- [ ] **Step 3: Write decisions data tests**
+
+`src/data/decisions.test.ts`:
+
+```ts
+import { describe, it, expect } from "vitest";
+import { DECISIONS } from "./decisions";
+import { PROJECTS } from "./projects";
+
+describe("DECISIONS", () => {
+  it("has decisions for every project", () => {
+    for (const p of PROJECTS) {
+      expect(DECISIONS[p.id]).toBeDefined();
+      expect(DECISIONS[p.id].projectId).toBe(p.id);
+    }
+  });
+
+  it("each project has at least one key point", () => {
+    for (const d of Object.values(DECISIONS)) {
+      expect(d.keyPoints.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("each key point has title and description", () => {
+    for (const d of Object.values(DECISIONS)) {
+      for (const kp of d.keyPoints) {
+        expect(kp.title).toBeTruthy();
+        expect(kp.description).toBeTruthy();
+      }
+    }
+  });
+
+  it("each decision has context, decision, and consequences", () => {
+    for (const d of Object.values(DECISIONS)) {
+      for (const dec of d.decisions) {
+        expect(dec.title).toBeTruthy();
+        expect(dec.context).toBeTruthy();
+        expect(dec.decision).toBeTruthy();
+        expect(dec.consequences).toBeTruthy();
+      }
+    }
+  });
+});
+```
+
+- [ ] **Step 4: Run tests**
+
+```bash
+cd projects/static-hosting && npm test
+```
+
+Expected: all tests pass.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add projects/static-hosting/src/data/*.test.ts
+git commit -m "test(static-hosting): add data layer tests"
+```
+
+---
+
+## Task 21: Component Tests — ProjectCard, TabPanel, CostTable
+
+**Files:**
+- Create: `projects/static-hosting/src/components/ProjectCard.test.tsx`
+- Create: `projects/static-hosting/src/components/TabPanel.test.tsx`
+- Create: `projects/static-hosting/src/components/CostTable.test.tsx`
+
+- [ ] **Step 1: Write ProjectCard tests**
+
+`src/components/ProjectCard.test.tsx`:
+
+```tsx
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { ProjectCard } from "./ProjectCard";
+import { PROJECTS } from "@/data/projects";
+
+function renderCard(projectId: string) {
+  const project = PROJECTS.find((p) => p.id === projectId)!;
+  return render(
+    <MemoryRouter>
+      <ProjectCard project={project} />
+    </MemoryRouter>,
+  );
+}
+
+describe("ProjectCard", () => {
+  it("renders project name and description", () => {
+    renderCard("data-lake");
+    expect(screen.getByText("Data Lake")).toBeInTheDocument();
+    expect(screen.getByText(/S3 → Glue → Athena/)).toBeInTheDocument();
+  });
+
+  it("renders service tags", () => {
+    renderCard("ha-web-service");
+    expect(screen.getByText("VPC")).toBeInTheDocument();
+    expect(screen.getByText("Fargate")).toBeInTheDocument();
+    expect(screen.getByText("DynamoDB")).toBeInTheDocument();
+  });
+
+  it("shows DEPLOYED badge for deployed projects", () => {
+    renderCard("data-lake");
+    expect(screen.getByText("DEPLOYED")).toBeInTheDocument();
+  });
+
+  it("shows THIS SITE badge for static-hosting", () => {
+    renderCard("static-hosting");
+    expect(screen.getByText("THIS SITE")).toBeInTheDocument();
+  });
+
+  it("links to the project route", () => {
+    renderCard("rag-bedrock");
+    const link = screen.getByRole("link");
+    expect(link).toHaveAttribute("href", "/rag-bedrock");
+  });
+});
+```
+
+- [ ] **Step 2: Write TabPanel tests**
+
+`src/components/TabPanel.test.tsx`:
+
+```tsx
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { TabPanel } from "./TabPanel";
+
+const TABS = [
+  { id: "a", label: "Tab A", content: <div>Content A</div> },
+  { id: "b", label: "Tab B", content: <div>Content B</div> },
+  { id: "c", label: "Tab C", content: <div>Content C</div> },
+];
+
+describe("TabPanel", () => {
+  it("renders all tab labels", () => {
+    render(<TabPanel tabs={TABS} />);
+    expect(screen.getByText("Tab A")).toBeInTheDocument();
+    expect(screen.getByText("Tab B")).toBeInTheDocument();
+    expect(screen.getByText("Tab C")).toBeInTheDocument();
+  });
+
+  it("shows first tab content by default", () => {
+    render(<TabPanel tabs={TABS} />);
+    expect(screen.getByText("Content A")).toBeInTheDocument();
+    expect(screen.queryByText("Content B")).not.toBeInTheDocument();
+  });
+
+  it("switches content when clicking a tab", async () => {
+    const user = userEvent.setup();
+    render(<TabPanel tabs={TABS} />);
+
+    await user.click(screen.getByText("Tab B"));
+    expect(screen.getByText("Content B")).toBeInTheDocument();
+    expect(screen.queryByText("Content A")).not.toBeInTheDocument();
+  });
+});
+```
+
+- [ ] **Step 3: Write CostTable tests**
+
+`src/components/CostTable.test.tsx`:
+
+```tsx
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { CostTable } from "./CostTable";
+import type { CostItem } from "@/data/projects";
+
+const ITEMS: CostItem[] = [
+  { resource: "S3 Storage", unit: "GB/month", monthlyCost: "<$0.01" },
+  {
+    resource: "CloudFront",
+    unit: "per request",
+    monthlyCost: "<$1",
+    note: "Free tier covers demo traffic",
+  },
+];
+
+describe("CostTable", () => {
+  it("renders all cost items", () => {
+    render(<CostTable items={ITEMS} dailyCost="<$0.01" />);
+    expect(screen.getByText("S3 Storage")).toBeInTheDocument();
+    expect(screen.getByText("CloudFront")).toBeInTheDocument();
+  });
+
+  it("renders monthly costs", () => {
+    render(<CostTable items={ITEMS} dailyCost="<$0.01" />);
+    expect(screen.getByText("<$0.01")).toBeInTheDocument();
+    expect(screen.getByText("<$1")).toBeInTheDocument();
+  });
+
+  it("renders notes when present", () => {
+    render(<CostTable items={ITEMS} dailyCost="<$0.01" />);
+    expect(screen.getByText("Free tier covers demo traffic")).toBeInTheDocument();
+  });
+
+  it("renders daily cost estimate", () => {
+    render(<CostTable items={ITEMS} dailyCost="~$1.50" />);
+    expect(screen.getByText("~$1.50")).toBeInTheDocument();
+  });
+});
+```
+
+- [ ] **Step 4: Run tests**
+
+```bash
+cd projects/static-hosting && npm test
+```
+
+Expected: all tests pass.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add projects/static-hosting/src/components/*.test.tsx
+git commit -m "test(static-hosting): add ProjectCard, TabPanel, CostTable component tests"
+```
+
+---
+
+## Task 22: Component Tests — ArchDiagram, QueryViewer, DecisionCards
+
+**Files:**
+- Create: `projects/static-hosting/src/components/ArchDiagram.test.tsx`
+- Create: `projects/static-hosting/src/components/QueryViewer.test.tsx`
+- Create: `projects/static-hosting/src/components/DecisionCard.test.tsx`
+
+- [ ] **Step 1: Write ArchDiagram tests**
+
+`src/components/ArchDiagram.test.tsx`:
+
+```tsx
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { ArchDiagram } from "./ArchDiagram";
+
+describe("ArchDiagram", () => {
+  it("renders diagram nodes for data-lake", () => {
+    render(<ArchDiagram projectId="data-lake" />);
+    expect(screen.getByText("Helsinki API")).toBeInTheDocument();
+    expect(screen.getByText("Glue Crawler")).toBeInTheDocument();
+    expect(screen.getByText("Athena")).toBeInTheDocument();
+  });
+
+  it("renders diagram nodes for ha-web-service", () => {
+    render(<ArchDiagram projectId="ha-web-service" />);
+    expect(screen.getByText("ALB")).toBeInTheDocument();
+    expect(screen.getByText("Fargate ×2")).toBeInTheDocument();
+    expect(screen.getByText("DynamoDB")).toBeInTheDocument();
+  });
+
+  it("renders sublabels", () => {
+    render(<ArchDiagram projectId="rag-bedrock" />);
+    expect(screen.getByText("API Key + Throttle")).toBeInTheDocument();
+    expect(screen.getByText("Claude Haiku")).toBeInTheDocument();
+  });
+
+  it("returns null for unknown projectId", () => {
+    const { container } = render(<ArchDiagram projectId="nonexistent" />);
+    expect(container.innerHTML).toBe("");
+  });
+});
+```
+
+- [ ] **Step 2: Write QueryViewer tests**
+
+`src/components/QueryViewer.test.tsx`:
+
+```tsx
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { QueryViewer } from "./QueryViewer";
+
+describe("QueryViewer", () => {
+  it("renders query tabs", () => {
+    render(<QueryViewer />);
+    expect(screen.getByText("Explore Raw")).toBeInTheDocument();
+    expect(screen.getByText("CSV → Parquet")).toBeInTheDocument();
+    expect(screen.getByText("Time Travel")).toBeInTheDocument();
+  });
+
+  it("shows first query SQL by default", () => {
+    render(<QueryViewer />);
+    expect(screen.getByText(/SELECT municipality, COUNT/)).toBeInTheDocument();
+  });
+
+  it("switches query on tab click", async () => {
+    const user = userEvent.setup();
+    render(<QueryViewer />);
+
+    await user.click(screen.getByText("Iceberg UPDATE"));
+    expect(screen.getByText(/UPDATE helsinki_open_data/)).toBeInTheDocument();
+  });
+
+  it("shows bytes scanned comparison when available", () => {
+    render(<QueryViewer />);
+    expect(screen.getByText("2.1 MB (CSV)")).toBeInTheDocument();
+  });
+});
+```
+
+- [ ] **Step 3: Write DecisionCards tests**
+
+`src/components/DecisionCard.test.tsx`:
+
+```tsx
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { DecisionCards } from "./DecisionCard";
+import { DECISIONS } from "@/data/decisions";
+
+describe("DecisionCards", () => {
+  it("renders key points for ha-web-service", () => {
+    render(<DecisionCards data={DECISIONS["ha-web-service"]} />);
+    expect(screen.getByText("No NAT Gateways")).toBeInTheDocument();
+    expect(screen.getByText("Multi-AZ")).toBeInTheDocument();
+    expect(screen.getByText("Least-Privilege IAM")).toBeInTheDocument();
+  });
+
+  it("renders decision records", () => {
+    render(<DecisionCards data={DECISIONS["ha-web-service"]} />);
+    expect(screen.getByText("VPC endpoints over NAT Gateways")).toBeInTheDocument();
+    expect(screen.getByText("Fargate over EC2")).toBeInTheDocument();
+  });
+
+  it("renders context, decision, and consequences for each ADR", () => {
+    render(<DecisionCards data={DECISIONS["rag-bedrock"]} />);
+    expect(screen.getByText("Context")).toBeInTheDocument();
+    expect(screen.getByText("Decision")).toBeInTheDocument();
+    expect(screen.getByText("Consequences")).toBeInTheDocument();
+  });
+});
+```
+
+- [ ] **Step 4: Run tests**
+
+```bash
+cd projects/static-hosting && npm test
+```
+
+Expected: all tests pass.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add projects/static-hosting/src/components/ArchDiagram.test.tsx projects/static-hosting/src/components/QueryViewer.test.tsx projects/static-hosting/src/components/DecisionCard.test.tsx
+git commit -m "test(static-hosting): add ArchDiagram, QueryViewer, DecisionCard tests"
+```
+
+---
+
+## Task 23: Route Tests — Landing + App Router
+
+**Files:**
+- Create: `projects/static-hosting/src/routes/Landing.test.tsx`
+- Create: `projects/static-hosting/src/App.test.tsx`
+
+- [ ] **Step 1: Write Landing page tests**
+
+`src/routes/Landing.test.tsx`:
+
+```tsx
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { Landing } from "./Landing";
+
+describe("Landing", () => {
+  it("renders hero title", () => {
+    render(
+      <MemoryRouter>
+        <Landing />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("AWS Architecture Demos")).toBeInTheDocument();
+  });
+
+  it("renders all 4 project cards", () => {
+    render(
+      <MemoryRouter>
+        <Landing />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Data Lake")).toBeInTheDocument();
+    expect(screen.getByText("HA Web Service")).toBeInTheDocument();
+    expect(screen.getByText("RAG on Bedrock")).toBeInTheDocument();
+    expect(screen.getByText("Static Hosting")).toBeInTheDocument();
+  });
+
+  it("renders stats bar", () => {
+    render(
+      <MemoryRouter>
+        <Landing />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("eu-north-1")).toBeInTheDocument();
+    expect(screen.getByText("12+")).toBeInTheDocument();
+  });
+
+  it("renders tech badges", () => {
+    render(
+      <MemoryRouter>
+        <Landing />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("CDK Python")).toBeInTheDocument();
+  });
+});
+```
+
+- [ ] **Step 2: Write App router tests**
+
+`src/App.test.tsx`:
+
+```tsx
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
+import { Layout } from "@/components/Layout";
+import { Landing } from "@/routes/Landing";
+
+function renderWithRouter(initialPath: string) {
+  const router = createMemoryRouter(
+    [
+      {
+        element: <Layout />,
+        children: [{ index: true, element: <Landing /> }],
+      },
+    ],
+    { initialEntries: [initialPath] },
+  );
+  return render(<RouterProvider router={router} />);
+}
+
+describe("App Router", () => {
+  it("renders nav with logo", () => {
+    renderWithRouter("/");
+    expect(screen.getByText("☁ AWS Portfolio")).toBeInTheDocument();
+  });
+
+  it("renders landing page at /", () => {
+    renderWithRouter("/");
+    expect(screen.getByText("AWS Architecture Demos")).toBeInTheDocument();
+  });
+});
+```
+
+- [ ] **Step 3: Run all tests**
+
+```bash
+cd projects/static-hosting && npm test
+```
+
+Expected: all tests pass.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add projects/static-hosting/src/routes/Landing.test.tsx projects/static-hosting/src/App.test.tsx
+git commit -m "test(static-hosting): add Landing page and App router tests"
+```
+
+---
+
+## Task 24: Interactive Demo Tests — CrudDemo, ChatDemo
+
+**Files:**
+- Create: `projects/static-hosting/src/components/CrudDemo.test.tsx`
+- Create: `projects/static-hosting/src/components/ChatDemo.test.tsx`
+
+- [ ] **Step 1: Write CrudDemo tests**
+
+`src/components/CrudDemo.test.tsx`:
+
+```tsx
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { CrudDemo } from "./CrudDemo";
+
+describe("CrudDemo", () => {
+  it("renders form with default values", () => {
+    render(<CrudDemo />);
+    expect(screen.getByDisplayValue("Helsinki Central Library")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("library")).toBeInTheDocument();
+  });
+
+  it("renders POST and GET buttons", () => {
+    render(<CrudDemo />);
+    expect(screen.getByText("POST /items")).toBeInTheDocument();
+    expect(screen.getByText("GET /items")).toBeInTheDocument();
+  });
+
+  it("shows placeholder when no response", () => {
+    render(<CrudDemo />);
+    expect(screen.getByText("Send a request to see the response")).toBeInTheDocument();
+  });
+
+  it("shows error when API URL not configured", async () => {
+    const user = userEvent.setup();
+    render(<CrudDemo />);
+
+    await user.click(screen.getByText("POST /items"));
+    expect(
+      screen.getByText("API URL not configured (set VITE_HA_WEB_API_URL)"),
+    ).toBeInTheDocument();
+  });
+
+  it("allows editing form fields", async () => {
+    const user = userEvent.setup();
+    render(<CrudDemo />);
+
+    const nameInput = screen.getByDisplayValue("Helsinki Central Library");
+    await user.clear(nameInput);
+    await user.type(nameInput, "Test Item");
+    expect(screen.getByDisplayValue("Test Item")).toBeInTheDocument();
+  });
+});
+```
+
+- [ ] **Step 2: Write ChatDemo tests**
+
+`src/components/ChatDemo.test.tsx`:
+
+```tsx
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { ChatDemo } from "./ChatDemo";
+
+describe("ChatDemo", () => {
+  it("renders empty state", () => {
+    render(<ChatDemo />);
+    expect(
+      screen.getByText("Ask a question about Helsinki services"),
+    ).toBeInTheDocument();
+  });
+
+  it("renders input and send button", () => {
+    render(<ChatDemo />);
+    expect(
+      screen.getByPlaceholderText("Ask about Helsinki services..."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Ask →")).toBeInTheDocument();
+  });
+
+  it("send button is disabled when input is empty", () => {
+    render(<ChatDemo />);
+    expect(screen.getByText("Ask →")).toBeDisabled();
+  });
+
+  it("send button enables when input has text", async () => {
+    const user = userEvent.setup();
+    render(<ChatDemo />);
+
+    await user.type(
+      screen.getByPlaceholderText("Ask about Helsinki services..."),
+      "What libraries?",
+    );
+    expect(screen.getByText("Ask →")).not.toBeDisabled();
+  });
+
+  it("shows rate limit note", () => {
+    render(<ChatDemo />);
+    expect(
+      screen.getByText("Rate limited: 10 req/sec, 100 req/day"),
+    ).toBeInTheDocument();
+  });
+});
+```
+
+- [ ] **Step 3: Run all tests**
+
+```bash
+cd projects/static-hosting && npm test
+```
+
+Expected: all tests pass.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add projects/static-hosting/src/components/CrudDemo.test.tsx projects/static-hosting/src/components/ChatDemo.test.tsx
+git commit -m "test(static-hosting): add CrudDemo and ChatDemo component tests"
+```
