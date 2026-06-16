@@ -1,0 +1,15 @@
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.backLink {
+  display: inline-block;
+  padding: 12px 24px;
+  font-size: 14px;
+  color: var(--accent);
+}
+
+.backLink:hover {
+  color: var(--accent-hover);
+}
