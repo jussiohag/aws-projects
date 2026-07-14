@@ -21,37 +21,27 @@ jobs:
 
           echo "=== Protection Audit: $REPO ==="
 
-          # Check for old branch protection (admin bypass loophole)
-          OLD=$(gh api "repos/${REPO}/branches/main/protection" --jq '.enforce_admins.enabled' 2>/dev/null || true)
-          if [[ -n "$OLD" ]]; then
-            echo "::error::Old branch protection exists (enforce_admins=$OLD) — this allows --admin bypass. Remove it."
-            ISSUES=$((ISSUES + 1))
-          fi
+          # Uses rules/branches/main (readable with contents:read) instead of
+          # /rulesets and /branches/main/protection, which return 403 for the
+          # default GITHUB_TOKEN on private repos and caused false positives.
+          # ponytail: old-protection and bypass-actor checks dropped — they need
+          # admin scope the workflow token never has; audit those via
+          # verify-protection.sh locally instead.
+          RULES=$(gh api "repos/${REPO}/rules/branches/main" 2>/dev/null || echo '[]')
 
-          # Check ruleset exists
-          RULESET_ID=$(gh api "repos/${REPO}/rulesets" --jq '[.[] | select(.name == "Protect main")][0].id' 2>/dev/null || true)
-          if [[ -z "$RULESET_ID" ]] || [[ "$RULESET_ID" == "null" ]]; then
-            echo "::error::No 'Protect main' ruleset found"
+          PR_RULE=$(echo "$RULES" | jq '[.[] | select(.type == "pull_request")] | length')
+          if [[ "$PR_RULE" == "0" ]]; then
+            echo "::error::No active pull_request rule on main — 'Protect main' ruleset missing or disabled"
             ISSUES=$((ISSUES + 1))
           else
-            # Check bypass actors
-            BYPASS=$(gh api "repos/${REPO}/rulesets/${RULESET_ID}" --jq '[.bypass_actors[]?] | length' 2>/dev/null || echo "?")
-            if [[ "$BYPASS" != "0" ]]; then
-              echo "::error::Ruleset has ${BYPASS} bypass actors (should be 0)"
-              ISSUES=$((ISSUES + 1))
-            else
-              echo "bypass_actors: [] (no admin bypass)"
-            fi
+            echo "pull_request rule: active"
+          fi
 
-            # Check required status checks exist
-            CHECKS=$(gh api "repos/${REPO}/rulesets/${RULESET_ID}" \
-              --jq '[.rules[]? | select(.type == "required_status_checks") | .parameters.required_status_checks[]?.context] | length' \
-              2>/dev/null || echo "0")
-            if [[ "$CHECKS" == "0" ]]; then
-              echo "::warning::No required status checks in ruleset"
-            else
-              echo "required status checks: ${CHECKS} configured"
-            fi
+          CHECKS=$(echo "$RULES" | jq '[.[] | select(.type == "required_status_checks") | .parameters.required_status_checks[]?.context] | length')
+          if [[ "$CHECKS" == "0" ]]; then
+            echo "::warning::No required status checks on main"
+          else
+            echo "required status checks: ${CHECKS} configured"
           fi
 
           if [[ $ISSUES -gt 0 ]]; then
