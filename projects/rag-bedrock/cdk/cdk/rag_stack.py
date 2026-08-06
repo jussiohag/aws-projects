@@ -70,6 +70,11 @@ class RagStack(Stack):
                 throttling_rate_limit=10,
                 throttling_burst_limit=5,
             ),
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "POST", "OPTIONS"],
+                allow_headers=["Content-Type", "x-api-key"],
+            ),
         )
 
         api_key = api.add_api_key("RagApiKey", api_key_name="rag-demo-key")

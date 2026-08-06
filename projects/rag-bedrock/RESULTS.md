@@ -2,9 +2,9 @@
 
 ## Infrastructure (CDK)
 - Lambda: `RagStack-RagFunction` (Python 3.12, 512 MB, 60s timeout)
-- API Gateway: `https://wworjg30n3.execute-api.eu-north-1.amazonaws.com/prod/`
+- API Gateway: `https://<API_ID>.execute-api.eu-north-1.amazonaws.com/prod/`
 - Model: `eu.anthropic.claude-haiku-4-5-20251001-v1:0` (EU inference profile)
-- Data source: `s3://helsinki-data-lake-899659212407/raw/helsinki_service_points.csv`
+- Data source: `s3://helsinki-data-lake-<ACCOUNT_ID>/raw/helsinki_service_points.csv`
 
 ## Example Queries
 

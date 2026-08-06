@@ -4,9 +4,17 @@ from datetime import datetime, timezone
 
 import boto3
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 app = FastAPI(title="Helsinki Service Directory")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Content-Type"],
+)
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "ha-web-items")
 REGION = os.environ.get("AWS_DEFAULT_REGION", "eu-north-1")
