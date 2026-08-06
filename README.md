@@ -12,6 +12,7 @@ AWS architecture demos built with CDK (Python). Each project demonstrates a prod
 | [Data Lake](projects/data-lake/) | S3, Glue, Athena, Iceberg | Helsinki open data pipeline with CSV → Parquet → Iceberg evolution |
 | [HA Web Service](projects/ha-web-service/) | VPC, ALB, Fargate, DynamoDB | Two-AZ Fargate service with no NAT Gateway architecture |
 | [RAG on Bedrock](projects/rag-bedrock/) | Lambda, API Gateway, Bedrock | Q&A over Helsinki data using Claude Haiku |
+| [Static Hosting](projects/static-hosting/) | S3, CloudFront | React frontend for the other three projects, served from S3 behind CloudFront with origin access control |
 
 ## Architecture Overview
 
@@ -53,9 +54,12 @@ aws-projects/
 │   ├── ha-web-service/
 │   │   ├── cdk/              CDK stack (VPC, ALB, Fargate, DynamoDB)
 │   │   └── app/              FastAPI container + Dockerfile
-│   └── rag-bedrock/
-│       ├── cdk/              CDK stack (Lambda, API Gateway, IAM)
-│       └── lambda/           Python handler (S3 retrieval + Bedrock)
+│   ├── rag-bedrock/
+│   │   ├── cdk/              CDK stack (Lambda, API Gateway, IAM)
+│   │   └── lambda/           Python handler (S3 retrieval + Bedrock)
+│   └── static-hosting/
+│       ├── cdk/              CDK stack (S3, CloudFront, bucket deployment)
+│       └── src/              React + TypeScript frontend (Vite)
 ├── docs/
 │   └── architecture.md       Detailed architecture documentation
 └── private/                  .gitignored — credentials, interview prep
@@ -69,11 +73,13 @@ aws-projects/
 - **Analytics**: Glue Data Catalog, Athena, Apache Iceberg
 - **AI/ML**: Amazon Bedrock (Claude Haiku 4.5)
 - **Networking**: VPC (2 AZ), ALB, API Gateway, VPC Gateway + Interface Endpoints
+- **Frontend**: React 19, TypeScript, Vite, Vitest
+- **CDN**: CloudFront with origin access control
 - **Application**: FastAPI, uvicorn, boto3
 
 ## Cost
 
-All three projects run under $2/day combined. The RAG project has zero idle cost (Lambda + API Gateway are pay-per-request; Bedrock is pay-per-token). The main running costs are the ALB (~$0.50/day) and VPC interface endpoints (~$0.24/day each). Destroy stacks when not in use.
+All four projects run under $2/day combined. The RAG project has zero idle cost (Lambda + API Gateway are pay-per-request; Bedrock is pay-per-token), and static hosting is close to free at portfolio traffic since CloudFront and S3 both bill per request. The main running costs are the ALB (~$0.50/day) and VPC interface endpoints (~$0.24/day each). Destroy stacks when not in use.
 
 ## License
 

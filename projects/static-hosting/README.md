@@ -1,73 +1,61 @@
-# React + TypeScript + Vite
+# Static Hosting
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React frontend for the other three projects in this repository, served from S3
+behind CloudFront. The CDK stack creates a private bucket with origin access
+control, so the bucket is never publicly readable and CloudFront is the only way
+in.
 
-Currently, two official plugins are available:
+## What it shows
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| Component | Backed by |
+|-----------|-----------|
+| `ChatDemo` | RAG on Bedrock, through API Gateway |
+| `CrudDemo` | HA Web Service, through the ALB |
+| `ArchDiagram` | Static architecture diagrams for all projects |
+| `CostTable` | Per-project running cost breakdown |
+| `DecisionCard` | Design decisions and the tradeoffs behind them |
 
-## React Compiler
+## Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+React 19, TypeScript, Vite, React Router, Vitest with Testing Library.
+Infrastructure in AWS CDK v2 (Python): S3, CloudFront, `BucketDeployment`.
 
-## Expanding the ESLint configuration
+## Local development
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+cp .env.example .env      # fill in the API URLs from the other stacks
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The demo components call the RAG and HA Web Service APIs, so those stacks need to
+be deployed and their URLs in `.env` for the live panels to return anything. The
+architecture, cost and decision sections work without any backend.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Test and lint
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm test              # vitest run
+npm run test:coverage
+npm run lint
+```
+
+## Deploy
+
+```bash
+npm run build         # emits dist/
+
+cd cdk
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cdk deploy
+```
+
+`cdk deploy` uploads `dist/` to the bucket and prints `DistributionUrl`, the
+CloudFront URL the site is served from.
+
+## Tear down
+
+```bash
+cd cdk && cdk destroy
 ```
