@@ -10,7 +10,7 @@ lint:
 	@echo "Lint OK"
 
 test:
-	@echo "No unit tests configured yet"
+	@cd projects/static-hosting && npx vitest run
 
 build: synth
 
