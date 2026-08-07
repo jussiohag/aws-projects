@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router";
 import { Layout } from "@/components/Layout";
 import { Landing } from "@/routes/Landing";
 import { DataLake } from "@/routes/DataLake";
