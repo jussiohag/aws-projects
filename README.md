@@ -1,7 +1,7 @@
 # aws-projects
 
 [![CI](https://github.com/jussiohag/aws-projects/actions/workflows/ci.yml/badge.svg)](https://github.com/jussiohag/aws-projects/actions/workflows/ci.yml)
-[![License: Private](https://img.shields.io/badge/license-private-red)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 AWS architecture demos built with CDK (Python). Each project demonstrates a production-ready pattern deployed to `eu-north-1` (Stockholm).
 
