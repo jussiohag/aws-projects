@@ -1,0 +1,75 @@
+.wrapper {
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.label {
+  text-align: center;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.flow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+}
+
+.nodeGroup {
+  display: flex;
+  align-items: center;
+}
+
+.arrow {
+  color: var(--border-card);
+  font-size: 20px;
+  margin: 0 8px;
+}
+
+.node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  min-width: 100px;
+  text-align: center;
+}
+
+.nodeIcon {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+.nodeLabel {
+  font-size: 12px;
+  color: var(--text-body);
+  font-weight: 600;
+}
+
+.nodeSub {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+@media (max-width: 768px) {
+  .flow {
+    flex-direction: column;
+  }
+
+  .arrow {
+    transform: rotate(90deg);
+    margin: 4px 0;
+  }
+}

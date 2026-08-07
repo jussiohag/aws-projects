@@ -1,0 +1,54 @@
+.wrapper {
+  max-width: 720px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th {
+  text-align: left;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-body);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.cost {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.note {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.total {
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--bg-deep);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.totalValue {
+  color: var(--accent);
+  font-weight: bold;
+}
