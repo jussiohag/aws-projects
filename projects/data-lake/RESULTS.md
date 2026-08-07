@@ -1,8 +1,8 @@
 # Data Lake Demo Results — 2026-06-15
 
 ## Infrastructure (CDK)
-- S3 data bucket: `helsinki-data-lake-899659212407`
-- S3 results bucket: `helsinki-data-lake-results-899659212407`
+- S3 data bucket: `helsinki-data-lake-<ACCOUNT_ID>`
+- S3 results bucket: `helsinki-data-lake-results-<ACCOUNT_ID>`
 - Glue database: `helsinki_open_data`
 - Glue crawler: `helsinki-raw-crawler`
 - Athena workgroup: `helsinki-data-lake` (1 GB scan limit)

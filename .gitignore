@@ -18,19 +18,25 @@ Thumbs.db
 *.swo
 *~
 
-# Claude Code settings (not the instruction files — those are tracked)
+# Claude Code / agent files — repo is public, keep untracked (history scrubbed 2026-08-07)
 .claude/
 .agents/
 .playwright-mcp/
 test-results/
+CLAUDE.md
+AGENTS.md
+.hooks-config
+.hooks-allowlist
+.githooks/
 
-# NOTE: CLAUDE.md, AGENTS.md, .hooks-config, .githooks/ are tracked
-# and safe in private repos. Before making ANY repo public, run:
-#   ~/Desktop/coding/pm/hooks/pre-publish-check.sh <path>
-# to remove them from tracking and scrub history if needed.
+# Build caches
+.vite/
+*.tsbuildinfo
+
 # CDK
 cdk.out/
 cdk.out2/
 
 # AWS CLI installer artifacts
 aws/
+.superpowers/
