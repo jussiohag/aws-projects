@@ -26,18 +26,16 @@ Checklist source: `~/coding/github-release-preparator/CHECKLIST.md` (run `releas
 - [x] Commit dependency-review workflow guard
 - [x] Set repo description + topics
 
-### Phase 2 — decisions (user)
+### Phase 2 — decisions (done 2026-08-07)
 
-- [ ] **License**: pick one (MIT typical for portfolio demos) and replace placeholder; update README badge
-- [ ] **Visibility**: private repo = recruiters see 404. Options:
-  - a) Make public: first run `pre-publish-check.sh` (untrack CLAUDE.md/AGENTS.md/hooks), decide whether account ID in history warrants `git filter-repo` or fresh-history republish
-  - b) Stay private: ensure applications link the live portfolio site instead of the repo
-- [ ] Merge chain: PR #5 (feat/frontend-portfolio) → feat/data-lake-and-ha-web-service → main, or collapse and PR straight to main. Main must hold the finished work before anyone looks at it
-- [ ] Triage 8 dependabot PRs (merge green, close stale majors with reason)
+- [x] **License**: MIT (PR #20), README badge + section updated
+- [x] **Visibility**: public. `pre-publish-check.sh` run; `git filter-repo` removed CLAUDE.md/AGENTS.md/.hooks-config/.hooks-allowlist/.githooks from all history and redacted account ID; main force-pushed; stale remote branches deleted; "Protect main" ruleset repointed from feat branch to main. Backup: `~/Desktop/coding/_backups/aws-projects-pre-filter-20260807.git`
+- [x] Merge chain: #4, #8–#12 → data-lake branch, #5 → data-lake branch, #18 → main, then #14–#17
+- [x] Dependabot triage: all merged; alerts fixed via react-router 8.3.0 (v8, -dom package dropped, imports rewritten) + pytest 9.0.3 (PR #21)
 
 ### Phase 3 — release polish
 
-- [ ] Merge #14 (README covers all four projects)
+- [x] Merge #14 (README covers all four projects)
 - [ ] README: add screenshots of the portfolio frontend; verify badges render for visitors
 - [ ] Set homepage URL to live demo (if kept deployed — mind Fargate/ALB cost)
 - [ ] Tag `v1.0.0` + GitHub Release notes (what works, demo-only parts, cost notes)
