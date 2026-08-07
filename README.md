@@ -83,4 +83,4 @@ All four projects run under $2/day combined. The RAG project has zero idle cost 
 
 ## License
 
-Private — all rights reserved.
+MIT — see [LICENSE](LICENSE).
