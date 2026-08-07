@@ -37,7 +37,7 @@ Checklist source: `~/coding/github-release-preparator/CHECKLIST.md` (run `releas
 
 - [x] Merge #14 (README covers all four projects)
 - [ ] README: add screenshots of the portfolio frontend; verify badges render for visitors
-- [ ] Set homepage URL to live demo (if kept deployed — mind Fargate/ALB cost)
+- [x] Set homepage URL to live demo — static-hosting stack deployed (S3+CloudFront, pennies/month), CloudFront URL set as repo homepage ✅ 2026-08-07 15:08
 - [ ] Tag `v1.0.0` + GitHub Release notes (what works, demo-only parts, cost notes)
 - [ ] Pin repo on GitHub profile
 - [ ] Re-run `release-check.sh` — target 0 FAIL
