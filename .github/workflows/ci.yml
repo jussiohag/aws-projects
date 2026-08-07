@@ -166,7 +166,7 @@ jobs:
         # Dependabot PRs run with a read-only token; gitleaks-action
         # crashes with 403 when listing PR commits
         if: github.actor != 'dependabot[bot]'
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
