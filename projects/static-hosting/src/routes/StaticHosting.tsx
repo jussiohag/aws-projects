@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { PROJECTS } from "@/data/projects";
 import { DECISIONS } from "@/data/decisions";
 import { ProjectHeader } from "@/components/ProjectHeader";

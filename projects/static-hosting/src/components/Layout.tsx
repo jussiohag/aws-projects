@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet } from "react-router";
 import styles from "./Layout.module.css";
 
 const GITHUB_URL = "https://github.com/jussiohag/aws-projects";
