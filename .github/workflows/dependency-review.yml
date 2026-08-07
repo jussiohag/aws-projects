@@ -9,6 +9,8 @@ permissions:
 
 jobs:
   dependency-review:
+    # Dependency review API needs GitHub Advanced Security on private repos
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
