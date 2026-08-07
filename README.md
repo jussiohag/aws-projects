@@ -79,6 +79,8 @@ aws-projects/
 
 ## Cost
 
+The live demo's RAG chat is intentionally offline: enabling it would bake the API key into the public JS bundle, exposing a paid Bedrock endpoint. The frontend shows a graceful "not configured" message instead; deploy the rag-bedrock stack and rebuild with `VITE_RAG_API_URL`/`VITE_RAG_API_KEY` to run it privately.
+
 All four projects run under $2/day combined. The RAG project has zero idle cost (Lambda + API Gateway are pay-per-request; Bedrock is pay-per-token), and static hosting is close to free at portfolio traffic since CloudFront and S3 both bill per request. The main running costs are the ALB (~$0.50/day) and VPC interface endpoints (~$0.24/day each). Destroy stacks when not in use.
 
 ## License
