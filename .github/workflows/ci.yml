@@ -21,7 +21,7 @@ jobs:
   detect-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # gitleaks-action scans the pushed commit range; a shallow clone
           # lacks the base commit and fails with "unknown revision"
