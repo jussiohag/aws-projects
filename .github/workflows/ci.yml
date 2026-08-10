@@ -78,7 +78,7 @@ jobs:
 
       - name: Cache pip
         if: steps.detect-python.outputs.detected == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt', '**/pyproject.toml') }}
@@ -122,7 +122,7 @@ jobs:
 
       - name: Cache Cargo
         if: steps.detect-rust.outputs.detected == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
