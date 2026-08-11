@@ -40,3 +40,11 @@ cdk.out2/
 # AWS CLI installer artifacts
 aws/
 .superpowers/
+
+# Internal working docs — repo is public and these are session scaffolding:
+# unfilled templates, half-done task lists, AI-session plans and specs
+BACKLOG.md
+ROADMAP.md
+SPRINT.md
+docs/plans/
+docs/superpowers/

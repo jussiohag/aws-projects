@@ -2,8 +2,13 @@
 
 ## Environment
 
+Prerequisites and per-project deploy steps are in the [README](README.md#quick-start).
+For repo-wide checks:
+
 ```bash
-# TODO: add setup instructions
+npm install          # biome, commitlint
+make lint
+make test
 ```
 
 ## Workflow
@@ -28,7 +33,6 @@
 
 ## Project Documentation
 
+- `docs/architecture.md` — diagrams, design decisions, cost analysis
 - `docs/decisions/` — Architecture Decision Records (MADR format)
-- `docs/plans/` — Implementation plans
 - `docs/postmortems/` — Sprint and feature retrospectives
-- Templates: `~/Desktop/coding/pm/templates/`
