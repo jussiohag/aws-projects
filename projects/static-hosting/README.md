@@ -5,6 +5,14 @@ behind CloudFront. The CDK stack creates a private bucket with origin access
 control, so the bucket is never publicly readable and CloudFront is the only way
 in.
 
+**[Open the deployed frontend](https://d1bccyxq5pc9x6.cloudfront.net)**
+
+## Architecture
+
+![CloudFront and private S3 static hosting architecture](../../docs/diagrams/static-hosting.svg)
+
+See the [architecture guide](../../docs/architecture.md#static-hosting) for the request, deployment, and SPA fallback flows.
+
 ## What it shows
 
 | Component | Backed by |

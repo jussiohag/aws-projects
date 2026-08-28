@@ -1,228 +1,68 @@
-# Architecture Documentation
+# Architecture
 
-## Overview
+Four independently deployable AWS CDK stacks demonstrate storage, analytics, application, AI, and edge-delivery patterns in `eu-north-1` (Stockholm).
 
-This repository contains three AWS architecture demos, each solving a distinct problem with production-ready patterns. All are deployed to `eu-north-1` (Stockholm) using AWS CDK (Python).
+![Portfolio architecture showing the four CDK stacks and their integrations](diagrams/portfolio.svg)
 
----
+The stacks share an account and tagging scheme, but they are not one deployment unit. Only one runtime dependency crosses stack boundaries: RAG on Bedrock reads the raw Helsinki dataset from the data lake bucket. The static frontend can call the two APIs when their URLs are supplied at build time.
 
-## Project 1: Mini Data Lake
+## Data lake
 
-### Problem
+![Data lake ingestion, catalog, and query architecture](diagrams/data-lake.svg)
 
-Open data from Helsinki's service map is available as JSON/CSV but needs to be queryable at scale with minimal cost. As data evolves, we need the ability to update individual records without rewriting entire datasets.
+The data bucket holds three representations of the same dataset:
 
-### Solution
+| Prefix | Format | Purpose |
+|---|---|---|
+| `raw/` | CSV | Immutable landing data and crawler input |
+| `curated/` | Parquet | Columnar analytics with lower scan cost |
+| `iceberg/` | Apache Iceberg | Row-level changes, snapshots, and time travel |
 
-A three-tier data lake on S3 with progressive optimization:
+The Glue crawler reads only `raw/` and registers its schema in `helsinki_open_data`. Athena uses that catalog for queries, writes CTAS and Iceberg data back to the data bucket, and sends query output to a separate results bucket. The enforced 1 GiB per-query cutoff limits accidental scans.
 
+The measured demo query scanned 3,764,820 bytes as CSV and 39,707 bytes as Parquet: about 99% less data scanned. At demo scale, storage and query charges are negligible; the pattern matters as data volume grows.
+
+## HA web service
+
+![Highly available Fargate service across two Availability Zones without NAT gateways](diagrams/ha-web-service.svg)
+
+The internet-facing ALB occupies public subnets. Two FastAPI tasks run in private subnets and are spread across two Availability Zones. The target group checks `/health`; ECS maintains the desired count and rolls back failed deployments through its circuit breaker.
+
+There is no NAT Gateway. Private tasks reach only the AWS services needed by the workload:
+
+| Endpoint type | Services | Role |
+|---|---|---|
+| Gateway | DynamoDB, S3 | Application data and ECR image layers |
+| Interface | ECR API, ECR Docker, CloudWatch Logs | Image discovery, image pull, and logging |
+
+DynamoDB uses on-demand billing and point-in-time recovery. The application task role receives access to this table only; the execution role handles image pulls and logs. A workload that calls arbitrary public or third-party endpoints would still need controlled egress, such as NAT or a proxy.
+
+## RAG on Bedrock
+
+![RAG request flow through API Gateway, Lambda, S3, and Amazon Bedrock](diagrams/rag-bedrock.svg)
+
+`GET /health` is public. `POST /ask` requires an API key and is governed by a usage plan with a 10 requests/second rate, burst capacity of 5, and a quota of 100 requests per day.
+
+For each question, Lambda reads the raw Helsinki CSV, ranks records with keyword matching, builds a grounded prompt, and invokes Claude Haiku 4.5 through an EU Bedrock inference profile. This intentionally avoids a continuously billed vector store. Keyword retrieval is inexpensive and transparent, but it does not provide semantic matching; a production path would introduce embeddings, a vector index or Bedrock Knowledge Base, and guardrails.
+
+The function is configured with 512 MiB memory, a 60-second timeout, least-privilege access to the source bucket and model, and a dedicated log group with seven-day retention.
+
+## Static hosting
+
+![CloudFront and private S3 static hosting architecture](diagrams/static-hosting.svg)
+
+The [deployed frontend](https://d1bccyxq5pc9x6.cloudfront.net) is a React single-page application built with Vite. CDK uploads `dist/` to a private, encrypted, versioned S3 bucket and invalidates the CloudFront distribution. Origin Access Control is the only read path to the bucket, and viewer requests are redirected to HTTPS.
+
+CloudFront maps S3 `403` and `404` responses to `/index.html` with a `200` response and a zero-second error-cache TTL. This lets direct navigation and refreshes work for client-side routes such as `/data-lake` and `/rag-bedrock`.
+
+The API integrations are optional build-time configuration. A public bundle must not contain a paid RAG API key; the deployed portfolio therefore leaves live chat disabled unless it is rebuilt for controlled use.
+
+## Shared operating model
+
+All resources carry `Project`, `Owner`, and `Environment` tags for inventory and cost allocation. Demo data resources use `RemovalPolicy.DESTROY` and automatic cleanup so teardown is predictable. Production deployments should retain or back up stateful resources instead.
+
+The architecture sources live beside the rendered assets in [`docs/diagrams/`](diagrams/). Regenerate an SVG after changing its Graphviz source:
+
+```bash
+dot -Tsvg docs/diagrams/<name>.dot -o docs/diagrams/<name>.svg
 ```
-Tier 1: Raw (CSV)           → Full table scans, highest cost
-Tier 2: Curated (Parquet)   → Columnar reads, 99% less data scanned
-Tier 3: Iceberg             → ACID transactions, time travel, schema evolution
-```
-
-### Design Decisions
-
-**Why Glue Crawler instead of manual schema?**
-For this demo, the crawler auto-detects CSV schema and registers it in the Data Catalog. In production, you would define schemas explicitly with Glue Schema Registry or Lake Formation to prevent schema drift.
-
-**Why Athena CTAS for Parquet conversion?**
-CTAS (CREATE TABLE AS SELECT) is the simplest way to convert formats. For recurring pipelines, you would use a Glue ETL job or Spark on EMR. CTAS is sufficient for one-time or low-frequency conversions.
-
-**Why Iceberg instead of Delta Lake or Hudi?**
-Iceberg is natively supported in Athena (v3), Glue, and EMR without additional configuration. AWS S3 Tables builds on Iceberg as the default table format. It is the direction AWS is investing in — relevant given that S3 Tables was launched in late 2024 and Jarkko Hirvonen posts about it regularly.
-
-**Why a 1 GB scan limit on the Athena workgroup?**
-At $5/TB, an accidental `SELECT *` on a large dataset can be expensive. The workgroup-level byte scan limit acts as a guardrail. For production, combine this with IAM policies restricting which workgroups users can access.
-
-### Cost Model
-
-| Operation | Cost |
-|-----------|------|
-| S3 storage (3.6 MB raw + Parquet + Iceberg) | < $0.01/month |
-| Glue Crawler run | ~$0.01 (billed per DPU-second) |
-| Athena query (raw CSV, 3.7 MB) | $0.000019 |
-| Athena query (Parquet, 39 KB) | $0.0000002 |
-
-At this scale, the data lake is essentially free. The cost story becomes significant at TB+ scale where the Parquet optimization saves real money.
-
----
-
-## Project 2: HA Web Service
-
-### Problem
-
-Deploy a REST API that is highly available across multiple Availability Zones, with a persistent data store, while minimizing cost and attack surface.
-
-### Solution
-
-ECS Fargate in private subnets behind an ALB, with DynamoDB accessed through a VPC Gateway Endpoint. No NAT Gateway.
-
-### Design Decisions
-
-**Why no NAT Gateway?**
-
-This is the central architecture decision. Traditional VPC designs route private subnet traffic through NAT Gateways for internet access. This project demonstrates that for many workloads, NAT Gateways are unnecessary:
-
-| Concern | NAT Gateway | VPC Endpoints |
-|---------|-------------|---------------|
-| Cost | $32/month/AZ + data processing | Gateway: free. Interface: ~$7/month each |
-| Security | Tasks can reach any internet host | Tasks can only reach specific AWS services |
-| Latency | Traverses NAT + internet gateway | Stays on AWS backbone |
-| Availability | Single point of failure per AZ | Managed by AWS, multi-AZ |
-
-The Fargate tasks only need to reach: DynamoDB (data), ECR (image pull), S3 (ECR layer storage), and CloudWatch (logs). All of these are AWS services with VPC endpoint support.
-
-**When you still need NAT:**
-- Third-party API calls (Stripe, Twilio, etc.)
-- Package manager access at runtime (pip install, npm install)
-- Calling services without VPC endpoint support
-
-For this workload, none of those apply.
-
-**Why Fargate over EC2?**
-
-| Factor | EC2 | Fargate |
-|--------|-----|---------|
-| Patching | You manage OS, runtime | AWS manages everything |
-| Scaling | Minutes (instance launch) | Seconds (task placement) |
-| Cost at low scale | Minimum 1 instance always running | Pay per task per second |
-| Cost at high scale | Reserved Instances cheaper | Savings Plans available |
-
-For a demo with 2 small tasks, Fargate is simpler and cheaper. At scale with predictable workloads, EC2 with Reserved Instances may be more cost-effective.
-
-**Why DynamoDB over RDS?**
-
-| Factor | DynamoDB | RDS |
-|--------|----------|-----|
-| Pricing model | Per-request (on-demand) | Per-hour (instance always running) |
-| HA setup | Built-in, multi-AZ by default | Multi-AZ requires 2x cost |
-| Schema | Flexible (NoSQL) | Fixed (relational) |
-| VPC access | Free gateway endpoint | Runs inside VPC (no endpoint needed) |
-
-For a key-value CRUD API with on-demand access patterns, DynamoDB on-demand is the natural fit. The gateway endpoint means zero network cost for DynamoDB traffic.
-
-**Why circuit breaker on the ECS service?**
-
-Without a circuit breaker, a bad deployment where tasks fail to start will block for up to 3 hours before CloudFormation times out and rolls back. The circuit breaker detects failing tasks within minutes and triggers automatic rollback.
-
-### Self-Healing Demonstration
-
-To demonstrate HA, kill a running task:
-
-1. Find a task ID: `aws ecs list-tasks --cluster <cluster> --service <service>`
-2. Stop it: `aws ecs stop-task --cluster <cluster> --task <task-id>`
-3. Watch ECS launch a replacement in ~30 seconds
-4. The ALB routes traffic to the healthy task during recovery — zero downtime
-
-### Network Flow
-
-```
-Client → ALB (public subnet, port 80)
-  → Fargate task (private subnet, port 8000)
-    → DynamoDB (via gateway endpoint, no internet)
-    → CloudWatch Logs (via interface endpoint)
-
-Image pull at startup:
-  Fargate → ECR API (interface endpoint)
-  Fargate → ECR Docker (interface endpoint)
-  Fargate → S3 (gateway endpoint, for image layers)
-```
-
----
-
-## Project 3: RAG on Bedrock
-
-### Problem
-
-Users want to ask natural language questions about Helsinki city services without manually searching through 21,000+ service point records.
-
-### Solution
-
-A serverless RAG (Retrieval-Augmented Generation) API: API Gateway → Lambda → S3 retrieval + Bedrock generation.
-
-```
-API Gateway (POST /ask)
-    → Lambda (512 MB, 60s timeout)
-        → S3: read Helsinki CSV, keyword-match relevant records
-        → Bedrock: send context + question to Claude Haiku 4.5
-        → Return structured JSON answer
-```
-
-### Design Decisions
-
-**Why keyword search instead of vector embeddings?**
-
-This demo uses keyword matching (term frequency scoring) instead of a proper vector store. The trade-off:
-
-| Approach | Pros | Cons |
-|----------|------|------|
-| Keyword search | Zero cost, no infrastructure, instant setup | Misses semantic similarity ("parks" won't match "puisto") |
-| Vector store (OpenSearch Serverless) | Semantic search, handles synonyms and translations | $5.76/day minimum (2 OCUs), significant for a demo |
-| Bedrock Knowledge Base | Managed chunking, embedding, and retrieval | Requires vector store backend |
-
-For a demo with structured tabular data (not unstructured documents), keyword search is adequate. The architecture pattern (retrieve → augment → generate) is identical regardless of retrieval method — swapping in a vector store is a configuration change, not a redesign.
-
-**Why Claude Haiku instead of a larger model?**
-
-Haiku is the fastest and cheapest Claude model. For this use case (summarizing structured data, not complex reasoning), it produces high-quality answers at ~$0.001 per query. In production, you might use Sonnet for more nuanced responses.
-
-**Why EU inference profile?**
-
-The `eu.anthropic.claude-haiku-4-5-20251001-v1:0` inference profile routes requests across EU regions (eu-north-1, eu-west-1, eu-west-3) for better availability and lower latency. Data stays within the EU. The IAM policy uses a region wildcard on the foundation model ARN since the profile can route to any EU region.
-
-**Why Lambda instead of Fargate?**
-
-| Factor | Lambda | Fargate |
-|--------|--------|---------|
-| Cold start | ~1s (acceptable for Q&A) | None (always running) |
-| Idle cost | $0 | ~$0.24/day minimum |
-| Max duration | 15 minutes | Unlimited |
-| Concurrency | 1000 default | Configurable |
-
-For a bursty Q&A workload with seconds between requests, Lambda's pay-per-invocation model is ideal. Fargate would be better for sustained high-throughput scenarios.
-
-### How It Connects to the Data Lake
-
-The RAG Lambda reads directly from the data lake's S3 bucket (`helsinki-data-lake-<account>/raw/`). This demonstrates a key data lake principle: **store once, consume many ways**. The same Helsinki CSV is:
-
-1. Queried via SQL in Athena (data lake project)
-2. Served as CRUD items in the web service (HA web project, different data)
-3. Used as RAG context for natural language Q&A (this project)
-
-### Production Path
-
-To evolve this into a production RAG system:
-
-1. **Add embeddings**: Use Amazon Titan Embeddings to vectorize the Helsinki data
-2. **Add vector store**: OpenSearch Serverless or Aurora pgvector for semantic retrieval
-3. **Use Bedrock Knowledge Base**: Managed chunking, embedding pipeline, and retrieval API
-4. **Add Guardrails**: Content filtering, PII redaction, grounding checks
-5. **Add caching**: API Gateway caching or ElastiCache to avoid re-computing identical queries
-6. **Add auth**: Cognito user pool or API keys on the API Gateway
-
----
-
-## Shared Patterns
-
-### Tagging Strategy
-
-All resources are tagged with:
-- `Project`: identifies which project owns the resource
-- `Owner`: `jussi`
-- `Environment`: `demo`
-
-These tags enable cost allocation, resource grouping in the console, and automated cleanup scripts.
-
-### Removal Policy
-
-All resources use `RemovalPolicy.DESTROY` — they are deleted when the stack is destroyed. This is correct for demo/dev environments. In production, data resources (S3, DynamoDB) should use `RETAIN` or `SNAPSHOT`.
-
-### CDK Best Practices Applied
-
-- L3 constructs where available (`ApplicationLoadBalancedFargateService`)
-- L1 (`Cfn*`) constructs where L2/L3 don't exist (Glue Crawler, Athena Workgroup)
-- Environment-specific stacks (`env=cdk.Environment(...)`)
-- Outputs for important resource identifiers
-- Security defaults: block public access on S3, least-privilege IAM, encryption enabled

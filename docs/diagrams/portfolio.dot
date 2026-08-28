@@ -1,0 +1,26 @@
+digraph G {
+  graph [bgcolor="white", rankdir=LR, pad="0.22", nodesep="0.42", ranksep="0.78", fontname="Lato", fontsize=12, labelloc=t, label="AWS architecture demos · eu-north-1"];
+  node [shape=box, style="rounded,filled", fontname="Lato", fontsize=11, color="#3b5b7a", penwidth=1.2, margin="0.18,0.12"];
+  edge [fontname="Lato", fontsize=9, color="#3b5b7a", fontcolor="#3b5b7a", arrowsize=0.7, penwidth=1.1];
+
+  user [label="Browser / API client", fillcolor="#ffffff"];
+  source [label="Helsinki Service Map\nopen data", fillcolor="#ffffff"];
+
+  subgraph cluster_aws {
+    label="AWS account · four independently deployable CDK stacks";
+    color="#ff9900"; penwidth=1.4; style="rounded"; fontcolor="#5c4100";
+
+    static [label="STATIC HOSTING\nCloudFront · private S3\nReact portfolio", fillcolor="#eef3f8"];
+    ha [label="HA WEB SERVICE\nALB · ECS Fargate\nDynamoDB", fillcolor="#eef3f8"];
+    rag [label="RAG ON BEDROCK\nAPI Gateway · Lambda\nClaude Haiku", fillcolor="#ffebcc"];
+    lake [label="DATA LAKE\nS3 · Glue · Athena\nParquet · Iceberg", fillcolor="#d9ead3"];
+
+    { rank=same; ha; rag; lake; }
+  }
+
+  user -> static [label="HTTPS"];
+  static -> ha [label="optional CRUD API", style=dashed];
+  static -> rag [label="optional Q&A API", style=dashed];
+  source -> lake [label="CSV ingestion"];
+  rag -> lake [label="reads raw CSV", dir=back, arrowtail=normal, arrowhead=none];
+}

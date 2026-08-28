@@ -4,23 +4,9 @@ A serverless data lake built on Helsinki's public service map data. Demonstrates
 
 ## Architecture
 
-```
-Helsinki Service Map API
-        │
-        ▼
-   S3 raw/ (CSV)
-        │
-        ├──► Glue Crawler ──► Glue Data Catalog
-        │                          │
-        │                          ▼
-        │                    Athena Workgroup
-        │                    (1 GB scan limit)
-        │
-        ├──► S3 curated/ (Parquet via CTAS)
-        │
-        └──► S3 iceberg/ (Iceberg table)
-             UPDATE, time-travel queries
-```
+![Data lake ingestion, catalog, and query architecture](../../docs/diagrams/data-lake.svg)
+
+See the [architecture guide](../../docs/architecture.md#data-lake) for data flows, boundaries, and design tradeoffs.
 
 ## What It Demonstrates
 

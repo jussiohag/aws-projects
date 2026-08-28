@@ -1,0 +1,26 @@
+digraph G {
+  graph [bgcolor="white", rankdir=LR, pad="0.22", nodesep="0.38", ranksep="0.68", fontname="Lato", fontsize=12, labelloc=t, label="RAG on Bedrock · request and grounding flow"];
+  node [shape=box, style="rounded,filled", fontname="Lato", fontsize=11, color="#3b5b7a", penwidth=1.2, margin="0.16,0.11"];
+  edge [fontname="Lato", fontsize=9, color="#3b5b7a", fontcolor="#3b5b7a", arrowsize=0.7, penwidth=1.1];
+
+  client [label="API client", fillcolor="#ffffff"];
+  lake [label="Data lake S3 bucket\nraw/helsinki_service_points.csv", fillcolor="#d9ead3"];
+  model [label="Amazon Bedrock\nEU inference profile\nClaude Haiku 4.5", fillcolor="#ffebcc"];
+
+  subgraph cluster_stack {
+    label="RagStack · eu-north-1"; color="#ff9900"; penwidth=1.4; style="rounded"; fontcolor="#5c4100";
+    api [label="API Gateway REST API\n/health · public\n/ask · API key required", fillcolor="#eef3f8"];
+    limits [label="Usage plan\n10 req/s · burst 5\n100 requests/day", fillcolor="#ffffff"];
+    fn [label="Lambda · Python 3.12\n512 MiB · 60 s\nkeyword retrieval + prompt assembly", fillcolor="#eef3f8"];
+    logs [label="CloudWatch Logs\n7-day retention", fillcolor="#ffffff"];
+  }
+
+  client -> api [label="GET /health or POST /ask"];
+  limits -> api [label="throttle / quota", style=dashed];
+  api -> fn [label="Lambda proxy integration"];
+  fn -> lake [label="1 · read and keyword-rank"];
+  fn -> model [label="2 · context + question"];
+  model -> fn [label="3 · grounded answer"];
+  fn -> api [label="4 · JSON response", constraint=false];
+  fn -> logs [label="execution logs", style=dashed];
+}

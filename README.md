@@ -5,6 +5,8 @@
 
 AWS architecture demos built with CDK (Python). Each project demonstrates a production-ready pattern deployed to `eu-north-1` (Stockholm).
 
+**[Open the deployed architecture portfolio](https://d1bccyxq5pc9x6.cloudfront.net)**
+
 ## Projects
 
 | Project | Services | Description |
@@ -16,7 +18,9 @@ AWS architecture demos built with CDK (Python). Each project demonstrates a prod
 
 ## Architecture Overview
 
-See [docs/architecture.md](docs/architecture.md) for detailed diagrams, design decisions, and cost analysis.
+![Overview of the four AWS architecture demos](docs/diagrams/portfolio.svg)
+
+See [docs/architecture.md](docs/architecture.md) for deployment diagrams, data flows, trust boundaries, and design tradeoffs.
 
 ## Quick Start
 
@@ -61,7 +65,8 @@ aws-projects/
 │       ├── cdk/              CDK stack (S3, CloudFront, bucket deployment)
 │       └── src/              React + TypeScript frontend (Vite)
 ├── docs/
-│   └── architecture.md       Detailed architecture documentation
+│   ├── architecture.md       Detailed architecture documentation
+│   └── diagrams/             Graphviz sources and rendered SVG diagrams
 └── private/                  .gitignored — credentials, interview prep
 ```
 
