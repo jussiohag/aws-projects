@@ -1,0 +1,26 @@
+digraph G {
+  graph [bgcolor="white", rankdir=LR, pad="0.22", nodesep="0.38", ranksep="0.7", fontname="Lato", fontsize=12, labelloc=t, label="Data lake · ingestion, catalog, and query paths"];
+  node [shape=box, style="rounded,filled", fontname="Lato", fontsize=11, color="#3b5b7a", penwidth=1.2, margin="0.16,0.11"];
+  edge [fontname="Lato", fontsize=9, color="#3b5b7a", fontcolor="#3b5b7a", arrowsize=0.7, penwidth=1.1];
+
+  source [label="Helsinki Service Map\nCSV", fillcolor="#ffffff"];
+  analyst [label="Analyst / SQL client", fillcolor="#ffffff"];
+
+  subgraph cluster_aws {
+    label="DataLakeStack · eu-north-1"; color="#ff9900"; penwidth=1.4; style="rounded"; fontcolor="#5c4100";
+    data [label="S3 DATA BUCKET\nraw/ · curated/ · iceberg/\nversioned · encrypted", fillcolor="#d9ead3"];
+    crawler [label="Glue Crawler\nraw/ schema discovery", fillcolor="#eef3f8"];
+    catalog [label="Glue Data Catalog\nhelsinki_open_data", fillcolor="#eef3f8"];
+    athena [label="Athena Workgroup\n1 GiB scan cutoff\nCloudWatch metrics", fillcolor="#ffebcc"];
+    results [label="S3 RESULTS BUCKET\nquery-results/\nencrypted", fillcolor="#d9ead3"];
+  }
+
+  source -> data [label="upload to raw/"];
+  data -> crawler [label="read raw/"];
+  crawler -> catalog [label="register / update schema"];
+  analyst -> athena [label="SQL"];
+  catalog -> athena [label="table metadata", dir=back, arrowtail=normal, arrowhead=none];
+  data -> athena [label="scan CSV / Parquet / Iceberg", dir=back, arrowtail=normal, arrowhead=none];
+  athena -> data [label="CTAS + Iceberg writes", constraint=false];
+  athena -> results [label="query output"];
+}

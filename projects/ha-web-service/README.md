@@ -4,39 +4,9 @@ A highly available REST API running on ECS Fargate behind an Application Load Ba
 
 ## Architecture
 
-```
-                 Internet
-                    │
-                    ▼
-        ┌───────────────────────────────────────┐
-        │       VPC (10.0.0.0/16, 2 AZs)       │
-        │                                       │
-        │  Public Subnets                       │
-        │  ┌─────────────┐  ┌─────────────┐    │
-        │  │  ALB node    │  │  ALB node    │   │
-        │  └──────┬───────┘  └──────┬──────┘    │
-        │         │                 │            │
-        │  Private Subnets (no internet)        │
-        │  ┌─────────────┐  ┌─────────────┐    │
-        │  │ Fargate task │  │ Fargate task │   │
-        │  │  (FastAPI)   │  │  (FastAPI)   │   │
-        │  └──────┬───────┘  └──────┬──────┘    │
-        │         │                 │            │
-        │         └────────┬────────┘            │
-        │                  │                     │
-        │     VPC Endpoints (no NAT)             │
-        │     ├── DynamoDB  (gateway, free)      │
-        │     ├── S3        (gateway, free)      │
-        │     ├── ECR Docker (interface)         │
-        │     ├── ECR API    (interface)         │
-        │     └── CloudWatch (interface)         │
-        └──────────────────┬────────────────────┘
-                           │
-                    ┌──────┴──────┐
-                    │  DynamoDB   │
-                    │ (on-demand) │
-                    └─────────────┘
-```
+![Highly available Fargate service across two Availability Zones without NAT gateways](../../docs/diagrams/ha-web-service.svg)
+
+See the [architecture guide](../../docs/architecture.md#ha-web-service) for network paths, boundaries, and design tradeoffs.
 
 ## What It Demonstrates
 

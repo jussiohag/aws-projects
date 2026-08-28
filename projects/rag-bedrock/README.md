@@ -4,22 +4,9 @@ A retrieval-augmented generation (RAG) API that answers natural language questio
 
 ## Architecture
 
-```
-User question
-      │
-      ▼
-  API Gateway (REST)
-      │
-      ▼
-  Lambda function
-      │
-      ├──► S3: read Helsinki service points CSV
-      │         (keyword search for relevant records)
-      │
-      ├──► Bedrock: send context + question to Claude Haiku
-      │
-      └──► Return answer + source count
-```
+![RAG request flow through API Gateway, Lambda, S3, and Amazon Bedrock](../../docs/diagrams/rag-bedrock.svg)
+
+See the [architecture guide](../../docs/architecture.md#rag-on-bedrock) for request sequencing, controls, and design tradeoffs.
 
 ## What It Demonstrates
 

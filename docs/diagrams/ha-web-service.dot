@@ -1,0 +1,32 @@
+digraph G {
+  graph [bgcolor="white", rankdir=TB, pad="0.22", nodesep="0.38", ranksep="0.48", fontname="Lato", fontsize=12, labelloc=t, label="HA web service · two Availability Zones, zero NAT gateways"];
+  node [shape=box, style="rounded,filled", fontname="Lato", fontsize=11, color="#3b5b7a", penwidth=1.2, margin="0.16,0.11"];
+  edge [fontname="Lato", fontsize=9, color="#3b5b7a", fontcolor="#3b5b7a", arrowsize=0.7, penwidth=1.1];
+
+  client [label="Internet client", fillcolor="#ffffff"];
+  dynamo [label="DynamoDB\nha-web-items · on-demand\npoint-in-time recovery", fillcolor="#d9ead3"];
+  services [label="AWS service plane\nECR API + ECR Docker · S3 layers\nCloudWatch Logs", fillcolor="#eef3f8"];
+
+  subgraph cluster_vpc {
+    label="VPC · 10.0.0.0/16 · no NAT Gateway"; color="#ff9900"; penwidth=1.4; style="rounded"; fontcolor="#5c4100";
+    alb [label="Internet-facing ALB\npublic subnets · /health checks", fillcolor="#ffebcc"];
+
+    subgraph cluster_az1 {
+      label="Availability Zone A"; color="#9db2c7"; style="rounded,dashed";
+      task1 [label="Fargate task\nFastAPI :8000\nprivate subnet", fillcolor="#eef3f8"];
+    }
+    subgraph cluster_az2 {
+      label="Availability Zone B"; color="#9db2c7"; style="rounded,dashed";
+      task2 [label="Fargate task\nFastAPI :8000\nprivate subnet", fillcolor="#eef3f8"];
+    }
+    endpoints [label="VPC ENDPOINTS\nGateway: DynamoDB, S3\nInterface: ECR API, ECR Docker, Logs", fillcolor="#d9ead3"];
+  }
+
+  client -> alb [label="HTTP"];
+  alb -> task1 [label="healthy traffic"];
+  alb -> task2 [label="healthy traffic"];
+  task1 -> endpoints;
+  task2 -> endpoints;
+  endpoints -> dynamo [label="application data"];
+  endpoints -> services [label="image pull + logs"];
+}
